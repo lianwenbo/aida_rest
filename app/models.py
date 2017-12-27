@@ -33,7 +33,7 @@ class User(db.Model):
         return bcrypt.check_password_hash(self.password_hash, password)
 
     def generate_token(self):
-        print app.config['SECRET_KEY']
+        app.logger.debug('the secret in generate %s', app.config['SECRET_KEY'])
         serializer = Serializer(app.config['SECRET_KEY'],
                                 expires_in=app.config['TOKEN_EXPIRED'])
         return serializer.dumps({'user_id': self.id})

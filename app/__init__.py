@@ -14,8 +14,8 @@ def set_app_config(config_name):
     bcrypt.init_app(app)
     # import the blueprint here is to keep the
     # initialization order
-    from views.auth import auth_blueprint
-    from views.question import question_blueprint
+    from .views.auth import auth_blueprint
+    from .views.question import question_blueprint
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(question_blueprint)
     return app

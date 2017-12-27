@@ -20,16 +20,16 @@ business_id = uuid.uuid4()
 def verify_token(token):
     g.user_id = None
     try:
-        print app.config['SECRET_KEY']
+        app.logger.debug('the secret key %s', app.config['SECRET_KEY'])
         serializer = Serializer(app.config['SECRET_KEY'],
                                 expires_in=app.config['TOKEN_EXPIRED'])
-        print 'token is %s' % token
+        app.logger.debug('token is %s', token)
         data = serializer.loads(token)
     except SignatureExpired:
-        print 'Signature Expired'
+        app.logger.warning('Signature Expired for token %s', token)
         return False
     except BadSignature:
-        print 'Bad Signature '
+        app.logger.warning('Bad Signature for token %s', token)
         return False
     user = User.query.filter_by(id=data['user_id']).first()
     if not user:
@@ -67,7 +67,7 @@ class GetVerifyCode(MethodView):
             params = {'code': digits, 'product': 'aida'}
             send_state = send_sms(business_id, phone, SIGN_NAME,
                                   TEMPLATE_CODE, params)
-            print 'the send state', send_state
+            app.logger.debug('the send state %s', send_state)
         db.session.commit()
         return make_response(jsonify({'phone': phone, 'verify_code': digits})), 200
 
@@ -80,7 +80,7 @@ class UserGetAPI(MethodView):
 
     def get(self, user_id):
         user = User.query.filter_by(id=g.user_id).first()
-        print 'before user get with user id ', g.user_id
+        app.logger.debug('before user get with user id %s', g.user_id)
         if user:
             res = {'id': user.id, 'name': user.name,
                    'point': user.point, 'avatar': user.avatar,

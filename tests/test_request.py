@@ -31,11 +31,11 @@ def verify_code(phone_num):
     else:
         return 'Unknow error'
 
-code = verify_code(user_1['phone'])
-print 'the code is:', code
-user_1['verification_code'] = code
-tok_res = post_token(user_1)
-print 'the token res is:', tok_res
-user_res = get_user(tok_res['user_id'], tok_res['access_token'])
-print 'the user_res is:', user_res
+#code = verify_code(user_1['phone'])
+#print('the code is:', code)
+#user_1['verification_code'] = code
+#tok_res = post_token(user_1)
+#print('the token res is:', tok_res)
+#user_res = get_user(tok_res['user_id'], tok_res['access_token'])
+#print('the user_res is:', user_res)
 
