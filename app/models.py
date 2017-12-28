@@ -36,5 +36,6 @@ class User(db.Model):
         app.logger.debug('the secret in generate %s', app.config['SECRET_KEY'])
         serializer = Serializer(app.config['SECRET_KEY'],
                                 expires_in=app.config['TOKEN_EXPIRED'])
+        app.logger.debug('generate token with expired in %d', app.config['TOKEN_EXPIRED'])
         return serializer.dumps({'user_id': self.id})
 

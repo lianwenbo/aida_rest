@@ -23,7 +23,7 @@ def verify_token(token):
         app.logger.debug('the secret key %s', app.config['SECRET_KEY'])
         serializer = Serializer(app.config['SECRET_KEY'],
                                 expires_in=app.config['TOKEN_EXPIRED'])
-        app.logger.debug('token is %s', token)
+        app.logger.debug('token is %s with expired in %d', token, app.config['TOKEN_EXPIRED'])
         data = serializer.loads(token)
     except SignatureExpired:
         app.logger.warning('Signature Expired for token %s', token)

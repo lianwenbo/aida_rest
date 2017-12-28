@@ -1,5 +1,5 @@
 from flask_testing import TestCase
-from app import set_app_config, db, app
+from app import set_app_config, app
 
 
 class TestBaseConfigCase(TestCase):
@@ -14,12 +14,7 @@ class TestBaseConfigCase(TestCase):
     def get_config_name(self):
         raise NotImplementedError('not impl')
 
-    def setUp(self):
-        db.create_all()
-
     def tearDown(self):
-        db.session.remove()
-        db.drop_all()
         self.app_context.pop()
 
 
@@ -51,7 +46,7 @@ class TestTestingConfig(TestBaseConfigCase):
         self.assertTrue(self.config['TESTING'])
 
     def test_token_expired(self):
-        self.assertEqual(self.config['TOKEN_EXPIRED'], 10)
+        self.assertEqual(self.config['TOKEN_EXPIRED'], 3)
         self.assertEqual(self.config['VERIFY_EXPIRED'], 3)
 
 

@@ -28,7 +28,7 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
                               'sqlite:///' + os.path.join(basedir, 'data-test.sqlite')
     SECRET_KEY = os.getenv('SECRET_KEY', 'secret key not defined by env')
-    TOKEN_EXPIRED = 10
+    TOKEN_EXPIRED = 3
     VERIFY_EXPIRED = 3
 
 
