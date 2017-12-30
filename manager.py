@@ -1,8 +1,10 @@
 from flask_script import Manager
-from app import app, db
+from app import create_app, db
 from app.models import User
+import os
 import unittest
 
+app = create_app(os.getenv('FLASK_CONFIG', 'default'))
 manager = Manager(app)
 
 

@@ -1,15 +1,14 @@
 from flask_testing import TestCase
-from app import set_app_config, app
+from app import create_app
 
 
 class TestBaseConfigCase(TestCase):
     def create_app(self):
-        self.app = app
-        set_app_config(self.get_config_name())
+        self.app = create_app(self.get_config_name())
         self.app_context = self.app.app_context()
         self.app_context.push()
         self.config = self.app.config
-        return app
+        return self.app
 
     def get_config_name(self):
         raise NotImplementedError('not impl')

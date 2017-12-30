@@ -5,10 +5,10 @@ from flask_bcrypt import Bcrypt
 from config import config
 db = SQLAlchemy()
 bcrypt = Bcrypt()
-app = Flask(__name__)
 
 
-def set_app_config(config_name):
+def create_app(config_name):
+    app = Flask(__name__)
     app.config.from_object(config[config_name])
     db.init_app(app)
     bcrypt.init_app(app)
@@ -19,6 +19,4 @@ def set_app_config(config_name):
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(question_blueprint)
     return app
-
-set_app_config(os.getenv('FLASK_CONFIG') or 'default')
 
