@@ -2,8 +2,9 @@
 from flask import Blueprint, request, jsonify, make_response, g
 from flask.views import MethodView
 from flask_httpauth import HTTPTokenAuth
+from flask import current_app as app
 from random import randint
-from .. import db, app
+from .. import db
 from ..models import User
 from itsdangerous import SignatureExpired, BadSignature, \
     TimedJSONWebSignatureSerializer as Serializer

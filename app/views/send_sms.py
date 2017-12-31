@@ -4,7 +4,7 @@ from aliyunsdkdysmsapi.request.v20170525 import SendSmsRequest
 from aliyunsdkdysmsapi.request.v20170525 import QuerySendDetailsRequest
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.profile import region_provider
-from .. import app
+from flask import current_app as app
 
 """
 短信业务调用接口示例，版本号：v20170525

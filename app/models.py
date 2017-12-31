@@ -1,4 +1,5 @@
-from . import db, bcrypt, app
+from . import db, bcrypt
+from flask import current_app as app
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 import time
 
