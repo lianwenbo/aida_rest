@@ -8,7 +8,8 @@ class Config:
     ACCESS_KEY_ID = os.environ.get('ACCESS_KEY_ID') or 'not authorize'
     ACCESS_KEY_SECRET = os.environ.get('ACCESS_KEY_SECRET') or 'secret not auth'
     TOKEN_EXPIRED = 1800
-    VERIFY_EXPIRED = 300
+    VERIFY_EXPIRED = 900
+    GET_CODE_PERIOD = 60
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     @staticmethod
@@ -30,6 +31,7 @@ class TestingConfig(Config):
     SECRET_KEY = os.getenv('SECRET_KEY', 'secret key not defined by env')
     TOKEN_EXPIRED = 3
     VERIFY_EXPIRED = 3
+    GET_CODE_PERIOD = 1
 
 
 class ProductionConfig(Config):
