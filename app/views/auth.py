@@ -24,16 +24,20 @@ def verify_token(token):
         app.logger.debug('the secret key %s', app.config['SECRET_KEY'])
         serializer = Serializer(app.config['SECRET_KEY'],
                                 expires_in=app.config['TOKEN_EXPIRED'])
-        app.logger.debug('token is %s with expired in %d', token, app.config['TOKEN_EXPIRED'])
+        app.logger.debug('token is %s with expired in %d',
+                         token, app.config['TOKEN_EXPIRED'])
         data = serializer.loads(token)
     except SignatureExpired:
         app.logger.warning('Signature Expired for token %s', token)
+        g.status = -1
         return False
     except BadSignature:
         app.logger.warning('Bad Signature for token %s', token)
+        g.status = -2
         return False
     user = User.query.filter_by(id=data['user_id']).first()
     if not user:
+        g.status = -3
         return False
     g.user_id = data['user_id']
     return True
@@ -57,12 +61,14 @@ class GetVerifyCode(MethodView):
         if not user:
             u = User(phone=phone, verify_code=digits)
             db.session.add(u)
-        elif time.time() - user.launch_timestamp > app.config['VERIFY_EXPIRED']:
+        elif time.time() - user.launch_timestamp > app.config['GET_CODE_PERIOD']:
             user.launch_timestamp = time.time()
             user.verify_code = digits
             db.session.add(user)
         else:
-            return make_response('<h1>User exists with repeated verify code submited</h1>', 400)
+            msg = '<h1>user resubmit to frequent please resubmit after %d ' \
+                  'seconds</h1>' % app.config.get('GET_CODE_PERIOD', 60)
+            return make_response(jsonify({'message': msg}), 400)
         if 'PRODUCT_MODE' in app.config and app.config['PRODUCT_MODE']:
             from send_sms import send_sms, SIGN_NAME, TEMPLATE_CODE
             params = {'code': digits, 'product': 'aida'}
@@ -70,7 +76,10 @@ class GetVerifyCode(MethodView):
                                   TEMPLATE_CODE, params)
             app.logger.debug('the send state %s', send_state)
         db.session.commit()
-        return make_response(jsonify({'phone': phone, 'verify_code': digits})), 200
+        if app.config.get('TESTING'):
+            return make_response(jsonify({'phone': phone, 'verify_code': digits})), 200
+        else:
+            return make_response(jsonify({}), 200)
 
 
 class UserGetAPI(MethodView):
@@ -99,32 +108,38 @@ class GetAndSetToken(MethodView):
         password = request.values['password']
         user = User.query.filter_by(phone=phone).first()
         if not user:
-            return make_response('<h1>The user not exists</h1>', 400)
-        if 'verification_code' in request.values:
-            verified_code = request.values['verification_code']
+            msg = '<h1>The user not exists</h1>'
+            return make_response(jsonify({'message': msg}), 401)
+        if 'verify_code' in request.values:
+            verified_code = request.values['verify_code']
             if verified_code != user.verify_code:
-                return make_response('<h1>verify code not right resubmit</h1>', 401)
+                msg = '<h1>verify code not right resubmit</h1>'
+                return make_response(jsonify({'message': msg}), 402)
             else:
                 user.password = password
                 user.verified = True
                 res = dict()
                 res['user_id'] = user.id
                 res['phone'] = user.phone
-                res['access_token'] = user.generate_token()
+                token = user.generate_token()
+                res['access_token'] = token.decode('utf-8')
                 res['user_name'] = user.name
                 res['expires_in'] = app.config['TOKEN_EXPIRED']
                 return make_response(jsonify(res)), 200
         else:
+            if not user.verified:
+                msg = 'Not verify please input the verification_code'
+                return make_response(jsonify({'message': msg}), 403)
             if user.check_password(password):
                 res = dict()
                 res['user_id'] = user.id
                 res['phone'] = user.phone
-                res['access_token'] = user.generate_token()
+                res['access_token'] = str(user.generate_token())
                 res['user_name'] = user.name
                 res['expires_in'] = app.config['TOKEN_EXPIRED']
                 return make_response(jsonify(res)), 200
             else:
-                return make_response('password not right', 402)
+                return make_response('password not right', 405)
 
 
 user_get_view = UserGetAPI.as_view('user_get_api')

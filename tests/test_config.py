@@ -26,7 +26,8 @@ class TestDevelopmentConfig(TestBaseConfigCase):
 
     def test_expired_elapsed(self):
         self.assertEqual(self.config['TOKEN_EXPIRED'], 1800)
-        self.assertEqual(self.config['VERIFY_EXPIRED'], 300)
+        self.assertEqual(self.config['VERIFY_EXPIRED'], 900)
+        self.assertEqual(self.config['GET_CODE_PERIOD'], 60)
 
     def test_access_key_not_auth(self):
         self.assertEqual(self.config['ACCESS_KEY_ID'], 'not authorize')
@@ -47,6 +48,7 @@ class TestTestingConfig(TestBaseConfigCase):
     def test_token_expired(self):
         self.assertEqual(self.config['TOKEN_EXPIRED'], 3)
         self.assertEqual(self.config['VERIFY_EXPIRED'], 3)
+        self.assertEqual(self.config['GET_CODE_PERIOD'], 1)
 
 
 class TestProductionConfig(TestBaseConfigCase):
