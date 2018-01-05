@@ -59,15 +59,15 @@ class GetVerifyCode(MethodView):
         user = User.query.filter_by(phone=phone).first()
         digits = generate_rand_digits(6)
         if not user:
-            u = User(phone=phone, verify_code=digits)
+            u = User(phone=phone, verification_code=digits)
             db.session.add(u)
         elif time.time() - user.launch_timestamp > app.config['GET_CODE_PERIOD']:
             user.launch_timestamp = time.time()
-            user.verify_code = digits
+            user.verification_code = digits
             db.session.add(user)
         else:
-            msg = '<h1>user resubmit to frequent please resubmit after %d ' \
-                  'seconds</h1>' % app.config.get('GET_CODE_PERIOD', 60)
+            msg = 'user resubmit to frequent please resubmit after %d ' \
+                  'seconds' % app.config.get('GET_CODE_PERIOD', 60)
             return make_response(jsonify({'message': msg}), 400)
         if 'PRODUCT_MODE' in app.config and app.config['PRODUCT_MODE']:
             from send_sms import send_sms, SIGN_NAME, TEMPLATE_CODE
@@ -77,14 +77,71 @@ class GetVerifyCode(MethodView):
             app.logger.debug('the send state %s', send_state)
         db.session.commit()
         if app.config.get('TESTING'):
-            return make_response(jsonify({'phone': phone, 'verify_code': digits})), 200
+            return make_response(jsonify({'phone': phone, 'verification_code': digits})), 200
         else:
             return make_response(jsonify({}), 200)
 
 
-class UserGetAPI(MethodView):
+class AuthVerifyCode(MethodView):
+    """
+    post the verify code and respont auth
+    """
+    def post(self):
+        if 'phone' not in request.values:
+            msg = 'phone is required'
+            return make_response(jsonify({'message': msg})), 401
+        phone = request.values['phone']
+        if 'verification_code' not in request.values:
+            msg = 'verification code is required'
+            return make_response(jsonify({'message': msg})), 401
+        verification_code = request.values['verification_code']
+        user = User.query.filter_by(phone=phone).first()
+        if not user:
+            msg = 'user not created for phone %s' % phone
+            return make_response(jsonify({'message': msg})), 402
+        if user.verification_code == verification_code:
+            res = dict()
+            res['user_id'] = user.id
+            res['phone'] = user.phone
+            token = user.generate_token()
+            res['access_token'] = token.decode('utf-8')
+            res['user_name'] = user.name
+            res['expires_in'] = app.config['TOKEN_EXPIRED']
+            return make_response(jsonify(res)), 200
+        else:
+            msg = 'verification code not right for phone %s retry' % phone
+            return make_response(jsonify({'message': msg})), 403
+
+
+class RegisterationView(MethodView):
     """
     User Registeration Resource
+    """
+    decorators = [auth.login_required]
+
+    def post(self):
+        if 'password' not in request.values:
+            msg = 'required password needed'
+            return make_response(jsonify({'message': msg})), 401
+        if not g.user_id:
+            msg = 'login token error'
+            return make_response(jsonify({'message': msg})), 402
+        user = User.query.filter_by(id=g.user_id).first()
+        print('register for user id %d' % g.user_id)
+        if user:
+            for key in request.values:
+                setattr(user, key, request.values[key])
+            user.registered = True
+            db.session.add(user)
+            db.session.commit()
+            return make_response(jsonify({'message': 'OK'})), 200
+        msg = 'User not found'
+        return make_response(jsonify({'message': msg})), 403
+
+
+class UserGetAPI(MethodView):
+    """
+    get user info
     """
     decorators = [auth.login_required]
 
@@ -96,7 +153,7 @@ class UserGetAPI(MethodView):
                    'point': user.point, 'avatar': user.avatar,
                    'phone': user.phone}
             return make_response(jsonify(res)), 200
-        return '<h1>the user id %s not found!</h1>' % user_id, 400
+        return 'the user id %s not found!' % user_id, 400
 
 
 class GetAndSetToken(MethodView):
@@ -108,48 +165,34 @@ class GetAndSetToken(MethodView):
         password = request.values['password']
         user = User.query.filter_by(phone=phone).first()
         if not user:
-            msg = '<h1>The user not exists</h1>'
+            msg = 'The user not exists'
             return make_response(jsonify({'message': msg}), 401)
-        if 'verify_code' in request.values:
-            verified_code = request.values['verify_code']
-            if verified_code != user.verify_code:
-                msg = '<h1>verify code not right resubmit</h1>'
-                return make_response(jsonify({'message': msg}), 402)
-            else:
-                user.password = password
-                user.verified = True
-                res = dict()
-                res['user_id'] = user.id
-                res['phone'] = user.phone
-                token = user.generate_token()
-                res['access_token'] = token.decode('utf-8')
-                res['user_name'] = user.name
-                res['expires_in'] = app.config['TOKEN_EXPIRED']
-                return make_response(jsonify(res)), 200
+        if user.check_password(password):
+            res = dict()
+            res['user_id'] = user.id
+            res['phone'] = user.phone
+            res['access_token'] = str(user.generate_token())
+            res['user_name'] = user.name
+            res['expires_in'] = app.config['TOKEN_EXPIRED']
+            return make_response(jsonify(res)), 200
         else:
-            if not user.verified:
-                msg = 'Not verify please input the verification_code'
-                return make_response(jsonify({'message': msg}), 403)
-            if user.check_password(password):
-                res = dict()
-                res['user_id'] = user.id
-                res['phone'] = user.phone
-                res['access_token'] = str(user.generate_token())
-                res['user_name'] = user.name
-                res['expires_in'] = app.config['TOKEN_EXPIRED']
-                return make_response(jsonify(res)), 200
-            else:
-                return make_response('password not right', 405)
+            return make_response('password not right', 405)
 
 
 user_get_view = UserGetAPI.as_view('user_get_api')
-get_verify_code = GetVerifyCode.as_view('get_verify_code')
+verification_code = GetVerifyCode.as_view('verification_code')
+auth_verification_code = AuthVerifyCode.as_view('auth_verification_code')
+auth_registeration = RegisterationView.as_view('auth_registeration')
 get_and_set_token = GetAndSetToken.as_view('get_and_set_token')
 
 
 auth_blueprint.add_url_rule('/aida/user/<user_id>', view_func=user_get_view,
                             methods=['GET'])
-auth_blueprint.add_url_rule('/aida/get_verify_code',
-                            view_func=get_verify_code, methods=['GET'])
+auth_blueprint.add_url_rule('/aida/verification_code',
+                            view_func=verification_code, methods=['GET'])
+auth_blueprint.add_url_rule('/aida/auth2/verification_code',
+                            view_func=auth_verification_code, methods=['POST'])
+auth_blueprint.add_url_rule('/aida/auth2/registeration',
+                            view_func=auth_registeration, methods=['POST'])
 auth_blueprint.add_url_rule('/aida/auth2/token', view_func=get_and_set_token,
                             methods=['POST'])
